@@ -1,3 +1,12 @@
+---
+title: Varuna Netra API
+emoji: 🌊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 # Varuna Netra
 
 Physics-constrained satellite oil-spill source attribution platform, built
