@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 22mm 18mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9px; color: #666; } }
+  body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10.5px; color: #1a1a1a; line-height: 1.45; }
+  h1 { font-size: 20px; margin-bottom: 2px; }
+  .subtitle { color: #555; font-size: 11px; margin-bottom: 18px; }
+  h2 { font-size: 13px; margin-top: 20px; margin-bottom: 6px; border-bottom: 1.5px solid #1a3a52; padding-bottom: 3px; color: #1a3a52; }
+  h2 .num { color: #9ca3af; font-weight: normal; margin-right: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 10px; }
+  th, td { border: 1px solid #d0d0d0; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: #f0f4f7; font-weight: 600; }
+  .kv td:first-child { width: 220px; color: #444; font-weight: 600; background: #fafafa; }
+  .status-badge { display: inline-block; padding: 2px 10px; border-radius: 3px; font-weight: 700; color: white; font-size: 12px; }
+  .status-LEADING { background: #d97706; }
+  .status-SECONDARY { background: #2563eb; }
+  .status-AMBIGUOUS { background: #6b7280; }
+  .status-REJECTED { background: #dc2626; }
+  .status-H0_UNKNOWN_SOURCE { background: #4b5563; }
+  .provenance { font-family: "DejaVu Sans Mono", monospace; font-size: 8.5px; background: #f7f7f7; border: 1px solid #e0e0e0;
+                padding: 6px 8px; white-space: pre-wrap; word-break: break-all; }
+  .disclaimers { border: 1.5px solid #dc2626; background: #fff5f5; padding: 10px 14px; margin-top: 8px; }
+  .disclaimers li { margin-bottom: 5px; }
+  .limitations li { margin-bottom: 4px; }
+  .map-wrap { text-align: center; margin: 8px 0; }
+  .reason-code { font-family: monospace; background: #fef2f2; color: #991b1b; padding: 1px 5px; border-radius: 2px; font-size: 9px; }
+  .pass { color: #15803d; font-weight: 700; }
+  .fail { color: #b91c1c; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1>Varuna Netra — Evidence Dossier</h1>
+<p class="subtitle">Automated analytical assessment · Not a legal determination · Generated {{ generated_at }}</p>
+
+<h2><span class="num">1.</span>Investigation Identification</h2>
+<table class="kv">
+  <tr><td>Incident ID</td><td>{{ incident_id }}</td></tr>
+  <tr><td>Report generated</td><td>{{ generated_at }}</td></tr>
+  <tr><td>Model version</td><td>{{ model_versions.pipeline }}</td></tr>
+  <tr><td>Final attribution status</td><td><span class="status-badge status-{{ outcome.status }}">{{ outcome.status }}</span></td></tr>
+</table>
+
+<h2><span class="num">2.</span>Observation Metadata</h2>
+<table class="kv">
+  <tr><td>Observation time</td><td>{{ observation_time }}</td></tr>
+  <tr><td>Area of interest</td><td>{{ aoi_bbox }}</td></tr>
+</table>
+
+<h2><span class="num">3.</span>Sentinel-1 Scene</h2>
+<table class="kv">
+  {% for k, v in sentinel1_scene.items() %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}
+</table>
+
+<h2><span class="num">4.</span>Spill Geometry</h2>
+<table class="kv">
+  {% for k, v in spill_detection.items() %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}
+</table>
+
+<h2><span class="num">5.</span>Probable Origin</h2>
+<div class="map-wrap">{{ map_svg | safe }}</div>
+<table class="kv">
+  <tr><td>Probable origin centroid</td><td>{{ origin_analysis.probable_origin_centroid }}</td></tr>
+  <tr><td>Uncertainty (characteristic radius)</td><td>{{ origin_analysis.uncertainty_km }} km</td></tr>
+  <tr><td>Ensemble size</td><td>{{ origin_analysis.ensemble_size }}</td></tr>
+</table>
+
+<h2><span class="num">6.</span>Release-Time Window</h2>
+<table class="kv">
+  <tr><td>Release window start</td><td>{{ origin_analysis.release_start }}</td></tr>
+  <tr><td>Release window end</td><td>{{ origin_analysis.release_end }}</td></tr>
+  <tr><td>Basis</td><td>Externally supplied slick-age estimate, not derived from backward-ensemble spread alone (see Limitations).</td></tr>
+</table>
+
+<h2><span class="num">7.</span>Environmental Forcing</h2>
+<table>
+  <tr><th>Field</th><th>Source</th><th>Dataset</th><th>Window</th></tr>
+  <tr><td>Wind</td><td>{{ environmental_provenance.wind.source }}</td><td>{{ environmental_provenance.wind.dataset }}</td>
+      <td>{{ environmental_provenance.wind.time_start }} – {{ environmental_provenance.wind.time_end }}</td></tr>
+  <tr><td>Current</td><td>{{ environmental_provenance.current.source }}</td><td>{{ environmental_provenance.current.dataset }}</td>
+      <td>{{ environmental_provenance.current.time_start }} – {{ environmental_provenance.current.time_end }}</td></tr>
+</table>
+
+<h2><span class="num">8.</span>AIS Candidate Table</h2>
+<table>
+  <tr><th>Vessel</th><th>MMSI</th><th>Type</th><th>Best-fit hour</th><th>Status</th></tr>
+  {% for c in candidates %}
+  <tr><td>{{ c.name or c.vessel_key }}</td><td>{{ c.mmsi or "—" }}</td><td>{{ c.vessel_type or "—" }}</td>
+      <td>T−{{ c.best_fit_hour }}h</td><td><span class="status-badge status-{{ c.status }}">{{ c.status }}</span></td></tr>
+  {% endfor %}
+</table>
+
+<h2><span class="num">9.</span>Candidate Scores</h2>
+<table>
+  <tr><th>Vessel</th><th>Spatial</th><th>Temporal</th><th>Trajectory</th><th>Behavioural</th><th>Overall (M4)</th></tr>
+  {% for c in candidates %}
+  <tr><td>{{ c.name or c.vessel_key }}</td><td>{{ c.spatial_score }}</td><td>{{ c.temporal_score }}</td>
+      <td>{{ c.trajectory_score }}</td><td>{{ c.behavioural_score }}</td><td><b>{{ c.overall_score }}</b></td></tr>
+  {% endfor %}
+</table>
+
+<h2><span class="num">10.</span>PASHA Simulations</h2>
+<table>
+  <tr><th>Vessel</th><th>Physical Consistency Score</th></tr>
+  {% for c in candidates %}
+  <tr><td>{{ c.name or c.vessel_key }}</td><td><b>{{ c.falsification.physical_consistency_score }}</b></td></tr>
+  {% endfor %}
+</table>
+<p><i>Physical Consistency Score reflects agreement between a candidate's counterfactual forward replay and the
+observed slick. It is not, and must not be interpreted as, a probability of guilt.</i></p>
+
+<h2><span class="num">11.</span>Falsification Results</h2>
+<table>
+  <tr><th>Vessel</th><th>Spatial</th><th>Temporal</th><th>Drift</th><th>Physical</th><th>Behavioural (supporting)</th><th>Pass/Fail</th><th>Reason codes</th></tr>
+  {% for c in candidates %}
+  <tr>
+    <td>{{ c.name or c.vessel_key }}</td>
+    <td class="{{ 'pass' if c.falsification.spatial_test else 'fail' }}">{{ "PASS" if c.falsification.spatial_test else "FAIL" }}</td>
+    <td class="{{ 'pass' if c.falsification.temporal_test else 'fail' }}">{{ "PASS" if c.falsification.temporal_test else "FAIL" }}</td>
+    <td class="{{ 'pass' if c.falsification.drift_test else 'fail' }}">{{ "PASS" if c.falsification.drift_test else "FAIL" }}</td>
+    <td class="{{ 'pass' if c.falsification.physical_test else 'fail' }}">{{ "PASS" if c.falsification.physical_test else "FAIL" }}</td>
+    <td>{{ c.falsification.behavioural_signal }}</td>
+    <td class="{{ 'pass' if c.falsification.pass_fail else 'fail' }}">{{ "SURVIVES" if c.falsification.pass_fail else "FALSIFIED" }}</td>
+    <td>{% for r in c.falsification.reasons %}<span class="reason-code">{{ r }}</span> {% endfor %}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2><span class="num">12.</span>Final Attribution Status</h2>
+<p><span class="status-badge status-{{ outcome.status }}">{{ outcome.status }}</span>
+   {% if outcome.leading_candidate %}— <b>{{ outcome.leading_candidate }}</b>{% endif %}
+   (margin {{ outcome.margin }})</p>
+<p>{{ outcome.reason }}</p>
+
+<h2><span class="num">13.</span>H0 — Unknown Source</h2>
+{% if outcome.status == "H0_UNKNOWN_SOURCE" %}
+<p><b>This investigation returned H0 — Unknown Source.</b> No candidate vessel survived the falsification gate.
+This is a valid and expected analytical outcome, not a failure of the pipeline: it means the available evidence
+does not support attributing this spill to any AIS-visible vessel considered. A vessel without AIS reporting
+(deliberately disabled or otherwise) cannot be ruled in or out by this analysis.</p>
+{% else %}
+<p>Not applicable to this investigation — a candidate survived the falsification gate (see Section 12).</p>
+{% endif %}
+
+<h2><span class="num">14.</span>Uncertainty</h2>
+<table class="kv">
+  <tr><td>Origin uncertainty (characteristic radius)</td><td>{{ origin_analysis.uncertainty_km }} km</td></tr>
+  <tr><td>Decision margin</td><td>{{ outcome.margin }}</td></tr>
+</table>
+
+<h2><span class="num">15.</span>Data Provenance</h2>
+<div class="provenance">{{ full_provenance_json }}</div>
+
+<h2><span class="num">16.</span>Model Versions</h2>
+<table class="kv">
+  {% for k, v in model_versions.items() %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}
+</table>
+
+<h2><span class="num">17.</span>Limitations</h2>
+<ul class="limitations">
+  {% for item in limitations %}<li>{{ item }}</li>{% endfor %}
+</ul>
+
+<h2>Legal &amp; Scientific Disclaimers</h2>
+<div class="disclaimers">
+<ul>
+  <li>Attribution status is an analytical assessment, not a legal verdict.</li>
+  <li>Physical consistency does not establish criminal responsibility.</li>
+  <li>AIS absence does not prove vessel involvement.</li>
+  <li>Satellite dark features may have non-oil look-alikes.</li>
+  <li>Model uncertainty can limit discrimination between closely spaced candidate sources.</li>
+</ul>
+</div>
+
+</body>
+</html>

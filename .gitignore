@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+**/node_modules/
+
+.vite/
+**/.vite/
+
+__pycache__/
+**/__pycache__/
+
+*.pyc
+
+*.zip
