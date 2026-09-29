@@ -14,10 +14,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Sync to Hugging Face Space
-        uses: huggingface/hub-sync@v0.3.0
+      - name: Install Hugging Face CLI
+        uses: astral-sh/setup-uv@v6
         with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: balapraharsham/varuna-netra-api
-          hf_token: ${{ secrets.HF_TOKEN }}
-          space_sdk: docker
+          version: latest
+
+      - name: Sync to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          uvx hf upload \
+            balapraharsham/varuna-netra-api \
+            . \
+            . \
+            --repo-type=space \
+            --exclude="backend/app/detection/ennore-search.json" \
+            --exclude="scenes.json" \
+            --exclude=".github/*" \
+            --exclude=".git/*" \
+            --delete="*" \
+            --commit-message="Deploy from GitHub"
