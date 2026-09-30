@@ -206,10 +206,16 @@ export interface IncidentDetail {
 
 /** POST /api/detection/run and GET /api/detection/{id} */
 export interface DetectionRunBody {
-  incident_id: string; product_id: string
-  minlon: number; minlat: number; maxlon: number; maxlat: number
+  incident_id: string
+  observation_id: string
+  product_id: string
+  minlon: number
+  minlat: number
+  maxlon: number
+  maxlat: number
   polarization: string
 }
+
 export interface DetectionCandidate {
   geometry: GeoJsonGeometry
   pixel_count?: number
