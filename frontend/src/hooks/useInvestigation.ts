@@ -46,7 +46,16 @@ export function useDetection(ctx: InvestigationCtx, incidentId: string) {
   const start = useCallback(async () => {
     if (!input || !input.product_id || !input.bbox) return
     const [minlon, minlat, maxlon, maxlat] = input.bbox
-    const r = await op.run({ incident_id: incidentId, product_id: input.product_id, minlon, minlat, maxlon, maxlat, polarization: polarizationFor(input) })
+    const r = await op.run({
+      incident_id: incidentId,
+      observation_id: input.id,
+      product_id: input.product_id,
+      minlon,
+      minlat,
+      maxlon,
+      maxlat,
+      polarization: polarizationFor(input)
+    })
     if (r) { ctx.patchRefs({ detectionId: r.detection_id }); incident.retry(); ctx.scenes.retry() }
   }, [input, incidentId, op, ctx, incident])
   const result = op.state.status === 'success' ? op.state.data : stored.data
