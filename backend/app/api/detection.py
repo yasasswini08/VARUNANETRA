@@ -1,6 +1,5 @@
 """
 M1 DETECT API (spec section 21: POST /api/detection/run, GET /api/detection/{id}).
-
 No database wiring lands until the persistence phase, so results are held
 in a process-local dict keyed by a UUID -- fine for exercising the pipeline
 end-to-end against a real SAFE product on a machine with CDSE access, not
@@ -9,7 +8,6 @@ explicitly rather than quietly shipped as if it were durable storage.
 """
 from __future__ import annotations
 
-import tempfile
 import uuid
 from pathlib import Path
 
@@ -20,11 +18,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import InsufficientData
 from app.core.logging import get_logger
 from app.core.provenance import DataKind, Provenance
-from app.db.repository import save_satellite_scene, save_spill_detection
+from app.db.repository import (
+    get_observation,
+    save_satellite_scene,
+    save_spill_detection,
+)
 from app.db.session import get_session
 from app.detection.pipeline import run_detection_from_safe
 from app.detection.postprocessing import LookAlikeRules
-from app.providers.sentinel1 import get_sentinel1_provider
 
 router = APIRouter()
 log = get_logger(__name__)
@@ -33,8 +34,18 @@ _RESULTS: dict[str, dict] = {}  # process-local cache for GET /api/detection/{id
 
 
 class DetectionRequest(BaseModel):
-    incident_id: str = Field(..., description="id returned by POST /api/incidents")
-    product_id: str = Field(..., description="CDSE STAC item id of a Sentinel-1 GRD scene")
+    incident_id: str = Field(
+        ...,
+        description="id returned by POST /api/incidents",
+    )
+    observation_id: str = Field(
+        ...,
+        description="Observation ID of the uploaded Sentinel-1 SAFE product",
+    )
+    product_id: str = Field(
+        ...,
+        description="CDSE STAC item ID or uploaded product ID",
+    )
     minlon: float
     minlat: float
     maxlon: float
@@ -45,32 +56,38 @@ class DetectionRequest(BaseModel):
 
 
 @router.post("/run")
-async def run_detection(req: DetectionRequest, session: AsyncSession = Depends(get_session)):
-    """Downloads the named GRD product from CDSE (or reuses a cached copy in
-    /tmp for this process) and runs the real M1 DETECT pipeline against it,
-    then persists the satellite scene and every accepted candidate as real
-    PostGIS rows against `req.incident_id`. This will raise 424
-    PROVIDER_NOT_CONFIGURED if CDSE credentials are missing -- there is no
-    synthetic fallback path here at all."""
-    provider = get_sentinel1_provider()
+async def run_detection(
+    req: DetectionRequest,
+    session: AsyncSession = Depends(get_session),
+):
     detection_id = str(uuid.uuid4())
+    observation = await get_observation(session, req.observation_id)
 
-    safe_root = Path(tempfile.gettempdir()) / "varuna-netra" / req.product_id
-    safe_root.mkdir(parents=True, exist_ok=True)
-    archive_path = safe_root / f"{req.product_id}.zip"
-
-    if not archive_path.exists():
-        await provider.download_scene(req.product_id, str(archive_path))
+    if observation is None:
         raise InsufficientData(
-            "Scene downloaded but not yet unpacked. Run "
-            "`python -m scripts.prepare_scene --product-id {}` to unzip it "
-            "into a .SAFE directory, then call this endpoint again.".format(req.product_id),
-            archive_path=str(archive_path),
+            "No observation found for the supplied observation_id.",
+            observation_id=req.observation_id,
+        )
+    
+    safe_dir = observation.get("safe_dir")
+    
+    if not safe_dir:
+        raise InsufficientData(
+            "Observation does not contain an unpacked SAFE directory.",
+            observation_id=req.observation_id,
+        )
+    
+    safe_path = Path(safe_dir)
+    
+    if not safe_path.exists() or not safe_path.is_dir():
+        raise InsufficientData(
+            "The observation SAFE directory does not exist on the backend.",
+            observation_id=req.observation_id,
+            safe_dir=safe_dir,
         )
 
-    safe_dir = safe_root / f"{req.product_id}.SAFE"
     candidates, diagnostics = run_detection_from_safe(
-        str(safe_dir),
+        str(safe_path),
         (req.minlon, req.minlat, req.maxlon, req.maxlat),
         polarization=req.polarization,
         look_alike_rules=LookAlikeRules(min_area_km2=req.min_area_km2, min_elongation=req.min_elongation),
@@ -88,15 +105,16 @@ async def run_detection(req: DetectionRequest, session: AsyncSession = Depends(g
     import datetime as dt
 
     # Retrieve authoritative Sentinel-1 acquisition metadata from CDSE.
-    scene_metadata = await provider.get_scene(req.product_id)
-
-    acquisition_time = scene_metadata.get("acquisition_time")
+    # Use the authoritative metadata extracted from the uploaded SAFE
+    # during SAR ingestion. Do not query CDSE again.
+    acquisition_time = observation.get("acquisition_time")
+    
     if not acquisition_time:
         raise InsufficientData(
-            "Sentinel-1 scene metadata does not contain acquisition time.",
-            product_id=req.product_id,
+            "Observation does not contain acquisition time.",
+            observation_id=req.observation_id,
         )
-
+    
     if isinstance(acquisition_time, str):
         acquisition_time = dt.datetime.fromisoformat(
             acquisition_time.replace("Z", "+00:00")
