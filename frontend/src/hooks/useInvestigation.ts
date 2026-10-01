@@ -16,7 +16,7 @@ import type {
 
 export const DEFAULT_AGE_MIN = 6
 export const DEFAULT_AGE_MAX = 30
-const ENV_MARGIN_DEG = 0.5 // same margin the backend pipeline applies around the slick
+const ENV_MARGIN_DEG = 0.5 
 
 /** Incident record + linked observations + persisted scenes + locally remembered result ids. */
 export function useInvestigation(id: string) {
