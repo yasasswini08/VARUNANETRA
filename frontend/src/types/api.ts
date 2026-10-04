@@ -214,6 +214,8 @@ export interface DetectionRunBody {
   maxlon: number
   maxlat: number
   polarization: string
+  min_area_km2?: number
+  min_elongation?: number
 }
 
 export interface DetectionCandidate {
