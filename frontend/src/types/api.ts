@@ -206,18 +206,10 @@ export interface IncidentDetail {
 
 /** POST /api/detection/run and GET /api/detection/{id} */
 export interface DetectionRunBody {
-  incident_id: string
-  observation_id: string
-  product_id: string
-  minlon: number
-  minlat: number
-  maxlon: number
-  maxlat: number
+  incident_id: string; product_id: string
+  minlon: number; minlat: number; maxlon: number; maxlat: number
   polarization: string
-  min_area_km2?: number
-  min_elongation?: number
 }
-
 export interface DetectionCandidate {
   geometry: GeoJsonGeometry
   pixel_count?: number
@@ -373,6 +365,13 @@ export interface ReportGenerateBody {
   observed_slick_geometry: Record<string, unknown>
   sentinel1_scene: Record<string, unknown>
   spill_detection: Record<string, unknown>
+  detection_candidates?: Record<string, unknown>[]
+  forecast?: {
+    horizon: string
+    lat: string
+    lon: string
+    spread: string
+  }[]
 }
 /** Response of POST /reports/{incident_id}/generate. `report_path` is a server-side path and is never displayed. */
 export interface ReportGenerated {
