@@ -54,7 +54,9 @@ export function useDetection(ctx: InvestigationCtx, incidentId: string) {
       minlat,
       maxlon,
       maxlat,
-      polarization: polarizationFor(input)
+      polarization: polarizationFor(input),
+      min_area_km2: 0.001,
+      min_elongation: 1.3
     })
     if (r) { ctx.patchRefs({ detectionId: r.detection_id }); incident.retry(); ctx.scenes.retry() }
   }, [input, incidentId, op, ctx, incident])
