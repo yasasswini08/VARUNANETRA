@@ -45,7 +45,7 @@ export function useDetection(ctx: InvestigationCtx, incidentId: string) {
   const op = useOperation(runDetection)
   const start = useCallback(async () => {
     if (!input || !input.product_id || !input.bbox) return
-    const [minlon, minlat, maxlon, maxlat] = [79.0, 13.2, 80.0, 14.2]
+    const [minlon, minlat, maxlon, maxlat] = input.bbox
     const r = await op.run({
       incident_id: incidentId,
       observation_id: input.id,
