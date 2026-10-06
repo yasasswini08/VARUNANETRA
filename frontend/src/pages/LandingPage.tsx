@@ -29,6 +29,13 @@ function HeroSignal() {
   )
 }
 
+const PROJECT_LINKS = [
+  { key: 'prototype', title: 'Live Prototype', body: 'The deployed frontend on Vercel.', href: 'https://varunanetra-six.vercel.app/' },
+  { key: 'backend', title: 'Backend API', body: 'FastAPI backend running on Hugging Face Spaces.', href: 'https://huggingface.co/spaces/balapraharsham/varuna-netra-api' },
+  { key: 'github', title: 'GitHub Repository', body: 'Full source code: backend, frontend, tests and docs.', href: 'https://github.com/yasasswini08/VARUNANETRA' },
+  { key: 'demo', title: 'Demo Video', body: 'Watch the walkthrough on YouTube.', href: 'https://youtu.be/RfGGjFFiubQ' },
+]
+
 const CAPS = [
   { icon: Eye, title: 'Slick detection', body: 'CFAR-based segmentation on calibrated, speckle-filtered Sentinel-1 backscatter with land masking.' },
   { icon: Waves, title: 'Drift reconstruction', body: 'Backward and forward Lagrangian ensembles forced by CMEMS currents and ERA5 wind.' },
@@ -168,6 +175,26 @@ export default function LandingPage() {
           </div>
         </section>
       )}
+
+      <section className="section" aria-labelledby="links">
+        <div className="section__inner">
+          <Reveal>
+            <span className="eyebrow">Project links</span>
+            <h2 id="links" style={{ marginTop: 14 }}>Prototype, backend, code and demo.</h2>
+          </Reveal>
+          <div className="sources">
+            {PROJECT_LINKS.map((l, i) => (
+              <Reveal key={l.key} delay={(((i % 3) + 1) as 1 | 2 | 3)} className="source">
+                <h3>{l.title}</h3>
+                <p>{l.body}</p>
+                <a href={l.href} target="_blank" rel="noopener noreferrer" className="link-more" style={{ marginTop: 12 }}>
+                  Open <ArrowRight size={14} />
+                </a>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="cta-final" aria-labelledby="cta">
         <Layers size={28} style={{ color: 'var(--primary)', margin: '0 auto 22px' }} aria-hidden="true" />
